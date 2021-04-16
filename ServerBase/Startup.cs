@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -13,10 +14,29 @@ using ServerBase.Services;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace ServerBase
 {
+    public class JwtTokenConfig
+    {
+        [JsonPropertyName("accessTokenExpiration")]
+        public int AccessTokenExpiration { get; set; }
+
+        [JsonPropertyName("audience")]
+        public string Audience { get; set; }
+
+        [JsonPropertyName("issuer")]
+        public string Issuer { get; set; }
+
+        [JsonPropertyName("refreshTokenExpiration")]
+        public int RefreshTokenExpiration { get; set; }
+
+        [JsonPropertyName("secret")]
+        public string Secret { get; set; }
+    }
+
     public class Startup
     {
         public Startup(IConfiguration configuration)
@@ -24,7 +44,6 @@ namespace ServerBase
             Configuration = configuration;
         }
 
-        // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
@@ -37,7 +56,7 @@ namespace ServerBase
             app.UseHttpsRedirection();
 
             app.UseRouting();
-
+            app.UseAuthentication();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
@@ -46,7 +65,6 @@ namespace ServerBase
             });
         }
 
-        // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
             var databaseSetting = Configuration.GetSection(Database.SectionKey).Get<Database>();
@@ -59,6 +77,28 @@ namespace ServerBase
             services.AddSwaggerGen(c =>
             {
                 c.SwaggerDoc("v1", new OpenApiInfo { Title = "ServerBase", Version = "v1" });
+
+                var securityScheme = new OpenApiSecurityScheme
+                {
+                    Name = "JWT Authentication",
+                    Description = "JWT Bearer token",
+                    In = ParameterLocation.Header,
+                    Type = SecuritySchemeType.Http,
+                    Scheme = "bearer",
+                    BearerFormat = "JWT",
+                    Reference = new OpenApiReference
+                    {
+                        Id = JwtBearerDefaults.AuthenticationScheme,
+                        Type = ReferenceType.SecurityScheme
+                    }
+                };
+                c.AddSecurityDefinition(securityScheme.Reference.Id, securityScheme);
+                c.AddSecurityRequirement(new OpenApiSecurityRequirement()
+                {
+                    {
+                        securityScheme, Array.Empty<string>()
+                    }
+                });
             });
         }
 
