@@ -24,10 +24,11 @@ namespace ServerBase.Controllers
 
         private readonly JwtTokenConfig _tokenConfig;
 
-        public UserController(ILogger<UserController> logger, ServerDbContext dbContext)
+        public UserController(ILogger<UserController> logger, ServerDbContext dbContext, JwtTokenConfig jwtTokenConfig)
         {
             _logger = logger;
             _accountDbContext = dbContext;
+            _tokenConfig = jwtTokenConfig;
         }
 
         [AllowAnonymous]
