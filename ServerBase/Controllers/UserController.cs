@@ -49,6 +49,8 @@ namespace ServerBase.Controllers
             var claims = new[]
             {
                 new Claim(ClaimTypes.Name, request.Name),
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Role, "Admin"),
             };
 
             var now = DateTime.UtcNow;
@@ -63,11 +65,11 @@ namespace ServerBase.Controllers
 
             _logger.LogInformation($"Login Successful: {request.Name},Admin,{accessToken}");
 
-            return Ok(new UserLoginResponse()
+            return Ok(new
             {
-                Name = request.Name,
-                AccessToken = accessToken,
-                Role = "Admin",
+                name = request.Name,
+                accessToken = accessToken,
+                role = "Admin",
             });
         }
     }
