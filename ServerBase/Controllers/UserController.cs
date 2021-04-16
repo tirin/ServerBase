@@ -61,6 +61,8 @@ namespace ServerBase.Controllers
                 signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_tokenConfig.Secret)), SecurityAlgorithms.HmacSha256Signature));
             var accessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken);
 
+            _logger.LogInformation($"Login Successful: {request.Name},Admin,{accessToken}");
+
             return Ok(new UserLoginResponse()
             {
                 Name = request.Name,

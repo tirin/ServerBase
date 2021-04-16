@@ -1,25 +1,20 @@
 ﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Options;
-using MySql.Data.MySqlClient;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
-using System.Data;
-using System.Diagnostics;
-using System.Net.Sockets;
 using System.Threading;
+using Microsoft.Extensions.Logging;
 
 namespace ServerBase.Services
 {
     public class Initializer : IHostedService
     {
+        private readonly ILogger<Initializer> _logger;
         private readonly IServiceScopeFactory _scopeFactory;
 
-        public Initializer(IServiceScopeFactory scopeFactory)
+        public Initializer(ILogger<Initializer> logger, IServiceScopeFactory scopeFactory)
         {
+            _logger = logger;
             _scopeFactory = scopeFactory;
         }
 
@@ -32,11 +27,15 @@ namespace ServerBase.Services
 
                 await database.MigrateAsync(cancellationToken);
             }
+
+            _logger.LogInformation("Start");
         }
 
         public async Task StopAsync(CancellationToken cancellationToken)
         {
             await Task.CompletedTask;
+
+            _logger.LogInformation("Stop");
         }
     }
 }
