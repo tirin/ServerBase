@@ -1,8 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace ServerBase.Entity
 {
@@ -21,6 +18,7 @@ namespace ServerBase.Entity
         [MaxLength(32)]
         public PointType Type { get; set; }
 
+        [ConcurrencyCheck]
         public long Quantity { get; set; }
 
         public DateTime CreateTime { get; set; }

@@ -20,6 +20,7 @@ namespace ServerBase.Controllers
     public class UserController : ControllerBase
     {
         private readonly ServerDbContext _accountDbContext;
+        private readonly ServerDbContext _gameDbContext;
         private readonly ILogger<UserController> _logger;
 
         private readonly JwtTokenConfig _tokenConfig;
@@ -28,8 +29,82 @@ namespace ServerBase.Controllers
         {
             _logger = logger;
             _accountDbContext = dbContext;
+            _gameDbContext = dbContext;
             _tokenConfig = jwtTokenConfig;
         }
+
+        [AllowAnonymous]
+        [HttpPost("signup")]
+        public async Task<IActionResult> SignUp([FromBody] UserSignUpRequest request)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest();
+            }
+
+            var user = await _accountDbContext.User.FirstOrDefaultAsync(i => i.Name == request.Name);
+            if (user != null)
+            {
+                return BadRequest();
+            }
+
+            user = new Entity.User()
+            {
+                Name = request.Name,
+                Password = request.Password,
+                CreateTime = DateTime.UtcNow,
+                Deleted = false,
+            };
+            await _accountDbContext.User.AddAsync(user);
+            await _accountDbContext.SaveChangesAsync();
+
+            // 기본 설정
+            var gold = new Entity.Point()
+            {
+                UserId = user.Id,
+                Type = Entity.PointType.Gold,
+                Quantity = 100,
+                CreateTime = DateTime.UtcNow,
+                Deleted = false,
+            };
+            await _gameDbContext.Point.AddAsync(gold);
+
+            var silver = new Entity.Point()
+            {
+                UserId = user.Id,
+                Type = Entity.PointType.Silver,
+                Quantity = 100,
+                CreateTime = DateTime.UtcNow,
+                Deleted = false,
+            };
+            await _gameDbContext.Point.AddAsync(silver);
+            await _gameDbContext.SaveChangesAsync();
+
+            return Ok(new
+            {
+                user = new
+                {
+                    id = user.Id,
+                    name = user.Name,
+                    createTime = user.CreateTime,
+                    role = "Admin",
+                },
+                points = new[]
+                {
+                    new
+                    {
+                        type = gold.Type.ToString(),
+                        quantity = gold.Quantity,
+				    },
+                    new
+                    {
+                        type = silver.Type.ToString(),
+                        quantity = silver.Quantity,
+				    },
+			    },
+            });
+        }
+
 
         [AllowAnonymous]
         [HttpPost("login")]
