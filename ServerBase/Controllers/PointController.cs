@@ -104,8 +104,8 @@ namespace ServerBase.Controllers
 
             return Ok(new
             {
-                point = point,
-                targetPoint = targetPoint,
+                point,
+                targetPoint,
             });
         }
     }
