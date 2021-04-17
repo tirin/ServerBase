@@ -4,13 +4,10 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
 using System.IdentityModel.Tokens.Jwt;
 using System.Linq;
 using System.Security.Claims;
 using System.Text;
-using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 
 namespace ServerBase.Controllers
@@ -23,14 +20,11 @@ namespace ServerBase.Controllers
         private readonly ServerDbContext _gameDbContext;
         private readonly ILogger<UserController> _logger;
 
-        private readonly JwtTokenConfig _tokenConfig;
-
         public UserController(ILogger<UserController> logger, ServerDbContext dbContext, JwtTokenConfig jwtTokenConfig)
         {
             _logger = logger;
             _accountDbContext = dbContext;
             _gameDbContext = dbContext;
-            _tokenConfig = jwtTokenConfig;
         }
 
         [AllowAnonymous]
@@ -108,7 +102,7 @@ namespace ServerBase.Controllers
 
         [AllowAnonymous]
         [HttpPost("login")]
-        public async Task<IActionResult> Login([FromBody] UserLoginRequest request)
+        public async Task<IActionResult> Login([FromBody] UserLoginRequest request, [FromServices] JwtTokenConfig tokenConfig)
         {
             if (!ModelState.IsValid)
             {
@@ -131,11 +125,11 @@ namespace ServerBase.Controllers
             var now = DateTime.UtcNow;
             var shouldAddAudienceClaim = string.IsNullOrWhiteSpace(claims?.FirstOrDefault(x => x.Type == JwtRegisteredClaimNames.Aud)?.Value);
             var jwtToken = new JwtSecurityToken(
-                _tokenConfig.Issuer,
-                shouldAddAudienceClaim ? _tokenConfig.Audience : string.Empty,
+                tokenConfig.Issuer,
+                shouldAddAudienceClaim ? tokenConfig.Audience : string.Empty,
                 claims,
-                expires: now.AddMinutes(_tokenConfig.AccessTokenExpiration),
-                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(_tokenConfig.Secret)), SecurityAlgorithms.HmacSha256Signature));
+                expires: now.AddMinutes(tokenConfig.AccessTokenExpiration),
+                signingCredentials: new SigningCredentials(new SymmetricSecurityKey(Encoding.ASCII.GetBytes(tokenConfig.Secret)), SecurityAlgorithms.HmacSha256Signature));
             var accessToken = new JwtSecurityTokenHandler().WriteToken(jwtToken);
 
             _logger.LogInformation($"Login Successful: {request.Name},Admin,{accessToken}");
