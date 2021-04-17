@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ServerBase.Entity
 {
-    public class User
+    public class User : IEntity
     {
         public long Id { get; set; }
 

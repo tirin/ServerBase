@@ -9,7 +9,7 @@ namespace ServerBase.Entity
         Silver,
     }
 
-    public class Point 
+    public class Point : IEntity
     {
         public long Id { get; set; }
 
