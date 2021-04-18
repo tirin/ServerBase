@@ -1,23 +1,18 @@
+using System;
+using System.Text;
+using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using ServerBase.Configuration;
+using ServerBase.ServerTasks;
 using ServerBase.Services;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.Json.Serialization;
-using System.Threading.Tasks;
 
 namespace ServerBase
 {
@@ -72,6 +67,9 @@ namespace ServerBase
             var databaseSetting = Configuration.GetSection(Database.SectionKey).Get<Database>();
             var connectionString = databaseSetting.MysqlConnectionString;
             services.AddDbContext<ServerDbContext>(options => options.UseMySQL(connectionString));
+
+            services.AddSingleton<IWaitingNodesContext, WaitingNodesContext>();
+            services.AddTransient<IServerTasksService, ServerTasksService>();
 
             var jwtTokenConfig = Configuration.GetSection("jwtTokenConfig").Get<JwtTokenConfig>();
             services.AddSingleton(jwtTokenConfig);

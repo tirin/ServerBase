@@ -1,25 +1,32 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Logging;
 
 namespace ServerBase.ServerTasks
 {
-    public class ServerTasksService
+    public interface IServerTasksService
     {
+        Task RunAsync(params IServerTask[] serverTasks);
+    }
+
+    public class ServerTasksService : IServerTasksService
+    {
+        private readonly ILogger<ServerTasksService> _logger;
         private readonly IWaitingNodesContext _waitingNodes;
 
-        public ServerTasksService(IWaitingNodesContext waitingNodes)
+        public ServerTasksService(ILogger<ServerTasksService> logger, IWaitingNodesContext waitingNodes)
         {
+            _logger = logger;
             _waitingNodes = waitingNodes;
         }
 
-        public async Task AddWaitingTasksAsync(params ServerTask[] serverTasks)
+        public async Task RunAsync(params IServerTask[] serverTasks)
         {
-            await RunServerTaskAsync(serverTasks);
+            await RunServerTasksAsync(serverTasks);
         }
 
-        private async Task AwaitAsync(string[] waitingIds, Func<Task<object[]>> worker)
+        private async Task WaitAsync(string[] waitingIds, Func<Task<object[]>> worker)
         {
             var waitingNodes = new List<WaitingNode>(waitingIds.Length);
             foreach (var waitingId in waitingIds)
@@ -32,9 +39,9 @@ namespace ServerBase.ServerTasks
             await work.AwaitAsync();
         }
 
-        private async Task RunServerTaskAsync(ServerTask[] serverTasks)
+        private async Task RunServerTasksAsync(IServerTask[] serverTasks)
         {
-            var tasks = new Queue<ServerTask>(serverTasks.Length * 2);
+            var tasks = new Queue<IServerTask>(serverTasks.Length * 2);
             foreach (var serverTask in serverTasks)
             {
                 tasks.Enqueue(serverTask);
@@ -42,23 +49,23 @@ namespace ServerBase.ServerTasks
 
             try
             {
-                //Logger.WriteDebugLine($"{serverTask.GetType().Name} Wait...");
-
                 while (tasks.Count > 0)
                 {
                     var task = tasks.Dequeue();
+                    _logger.LogInformation($"{task.GetType().Name} Wait...");
 
                     var nextTasks = Array.Empty<ServerTask>();
-                    await AwaitAsync(task.WaitingIds, async () =>
+                    await WaitAsync(task.WaitingIds, async () =>
                     {
                         return await task.RunAsync();
                     });
+
+                    _logger.LogInformation($"{task.GetType().Name} Complete");
                     foreach (var nextTask in task.NextTasks)
                     {
                         tasks.Enqueue(nextTask);
                     }
                 }
-                //Logger.WriteDebugLine($"{serverTask.GetType().Name} Complete");
             }
             catch (Exception)
             {
