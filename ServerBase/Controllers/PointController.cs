@@ -3,7 +3,9 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ServerBase.Entity;
+using ServerBase.ServerTasks;
 using System;
+using System.Collections.Generic;
 using System.Security.Claims;
 using System.Threading.Tasks;
 
@@ -61,9 +63,59 @@ namespace ServerBase.Controllers
             return Ok(point);
         }
 
+        private class PointStealTask : ServerTask
+        {
+            private readonly ServerDbContext _gameDbContext;
+            private readonly long _pointId;
+            private readonly long _targetPointId;
+            private readonly long _quantity;
+
+            private Point _point;
+            private Point _targetPoint;
+
+            public PointStealTask(ServerDbContext gameDbContext, long pointId, long targetPointId, long quantity)
+            {
+                _gameDbContext = gameDbContext;
+                _pointId = pointId;
+                _targetPointId = targetPointId;
+                _quantity = quantity;
+            }
+
+            public override IEnumerable<string> WaitingIds
+            {
+                get
+                {
+                    yield return _point.GetWaitingId();
+                    yield return _targetPoint.GetWaitingId();
+                }
+            }
+
+            protected override async Task AssignAsync()
+            {
+                _point = await _gameDbContext.Point.FirstOrDefaultAsync(i => i.Id == _pointId);
+                _targetPoint = await _gameDbContext.Point.FirstOrDefaultAsync(i => i.Id == _targetPointId);
+            }
+
+            protected override async Task<object[]> OnWorkAsync()
+            {
+                _targetPoint.Quantity -= _quantity;
+                _point.Quantity += _quantity;
+                await _gameDbContext.SaveChangesAsync(); // 동시성 문제가 발생 가능
+
+                return new[]
+                {
+                    new
+                    {
+                        point = _point,
+                        targetPoint = _targetPoint,
+                    },
+                };
+            }
+        }
+
         [Authorize]
         [HttpPost("steal")]
-        public async Task<IActionResult> Steal([FromBody] PointStealRequest request)
+        public async Task<IActionResult> Steal([FromBody] PointStealRequest request, [FromServices] IServerTasksService service)
         {
             if (!ModelState.IsValid)
             {
@@ -98,15 +150,8 @@ namespace ServerBase.Controllers
                 await _gameDbContext.Point.AddAsync(point);
             }
 
-            targetPoint.Quantity -= request.Quantity;
-            point.Quantity += request.Quantity;
-            await _gameDbContext.SaveChangesAsync(); // 동시성 문제가 발생 가능
-
-            return Ok(new
-            {
-                point,
-                targetPoint,
-            });
+            var ret = await service.RunAsync(new PointStealTask(_gameDbContext, point.Id, targetPoint.Id, request.Quantity));
+            return Ok(ret);
         }
     }
 }
