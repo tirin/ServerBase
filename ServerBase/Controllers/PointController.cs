@@ -90,7 +90,7 @@ namespace ServerBase.Controllers
                 }
             }
 
-            protected override async Task AssignAsync()
+            public override async Task AssignAsync()
             {
                 _point = await _gameDbContext.Point.FirstOrDefaultAsync(i => i.Id == _pointId);
                 _targetPoint = await _gameDbContext.Point.FirstOrDefaultAsync(i => i.Id == _targetPointId);
@@ -152,6 +152,14 @@ namespace ServerBase.Controllers
 
             var ret = await service.RunAsync(new PointStealTask(_gameDbContext, point.Id, targetPoint.Id, request.Quantity));
             return Ok(ret);
+        }
+
+        [Authorize]
+        [HttpGet("all")]
+        public async Task<IActionResult> All()
+        {
+            var points = await _gameDbContext.Point.ToArrayAsync();
+            return Ok(points);
         }
     }
 }

@@ -56,6 +56,8 @@ namespace ServerBase.ServerTasks
                     var task = tasks.Dequeue();
                     _logger.LogInformation($"{task.GetType().Name} Wait...");
 
+                    await task.AssignAsync();
+
                     var nextTasks = Array.Empty<ServerTask>();
                     ret.AddRange(await WaitAsync(task.WaitingIds.ToArray(), async () =>
                     {
